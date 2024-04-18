@@ -13,7 +13,7 @@ SpikeInBAM is a fast tool to simulate variants on already available BAMs.
 ## Usage:
 
 First you will need to define a config file with the desired variants to be simulated.
-There should be  variant per line. Here an example:
+There should be a variant per line. Here an example:
 ```
     /home/user/input_folder/sample1.bam  chr7   55242467   GAATTAAGAGAAGCAACA   GTTGCT
     /home/user/input_folder/sample2.bam  chr18   29104352   A   T
@@ -39,7 +39,7 @@ It will create a config file supporting randomly placed single-exon or multiple-
     python3 python3 generate_config.py --indir /path/to/directory_with_bam_files -c <del/dup> -b  /path/to/gene_panel.bed  --mode <single/multiple > output.config
 ```
 
-### Motivation:
+## Motivation:
 
 There are already several programs that can generate synthetic datasets.
 However, not all of them can be used to "inject" variants over existing BAMs. This feature is desirable when testing the specificity of any bioinformatic tool.
@@ -52,7 +52,7 @@ SpikeInBAM can:
 - Simulate Indel and complex Indels
 - Simulate CNVs. It modifies the VAFs of any SNV that overlaps the CNV to be simulated
 
-### Limitations:
+## Limitations:
 
 - Simulate Structural Variants (SVs) supported by sequenced breakpoints.
 - Somatic variants.
