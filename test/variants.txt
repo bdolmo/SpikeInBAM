@@ -1,0 +1,8 @@
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36968.rmdup.bam  chr1   237823174   237825174    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36974.rmdup.bam  chr10   112538568   112549568    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36976.rmdup.bam  chr18   29101593    29102904    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36977.rmdup.bam  chr10   43601800    43615512    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36982.rmdup.bam  chr11   47356593    47359593    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36983.rmdup.bam  chr3   38674526    38687267    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36985.rmdup.bam  chr1   156082722    156089883    DEL
+/home/bdelolmo/Desktop/RUN20240402-CGC64004/RB36986.rmdup.bam  chr7   150652435    150661275    DEL

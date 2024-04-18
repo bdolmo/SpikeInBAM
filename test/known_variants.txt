@@ -1,0 +1,17 @@
+24P979  p.Glu746_Thr751delinsValAla  chr7:g.55242467_55242483delinsTTGCT
+24P180  p.Leu747_Ala750delinsPro   chr7:g.55242468_55242478delinsGC
+24P2254 p.Leu747_Pro753delinsSer     chr7:g.55242470_55242487del
+24P979  p.Glu746_Thr751delinsValAla chr7:g.55242467_55242483delinsTTGCT
+AP0025-23   p.Glu746_Ser752delinsVal    chr7:g.55242467_55242485delinsT
+AP0028-22    p.Thr751_Ile759delinsAsn    chr7:g.55242482_55242507delinsAT
+AP0088-23    p.Leu747_Pro753delinsSer    chr7:g.55242470_55242487del
+AP0156-22    p.Leu747_Ser752delinsGln    chr7:g.55242468_55242486delinsGCAA
+AP0173-21    p.Ala750_Ile759delinsGlyGly     chr7:g.55242479_55242506delinsGTGG
+AP0198-22    p.Leu747_Ala750delinsPro    chr7:g.55242468_55242478delinsGC
+AP0219-21    p.Glu746_Ser752delinsVal    chr7:g.55242467_55242485delinsT
+AP0220-21    p.His773_Val774delinsLeuMet    chr7:g.55249020_55249022delinsTTA
+AP0260-22    p.Leu747_Pro753delinsSer    chr7:g.55242470_55242487del
+AP0272-22    p.Leu747_Pro753delinsSer    chr7:g.55242470_55242487del
+AP0273-21    p.Glu746_Ser752delinsVal    chr7:g.55242467_55242485delinsT
+AP0301-22    p.Glu746_Ser752delinsVal    chr7:g.55242467_55242485delinsT
+AP0326-22    p.Glu746_Ser752delinsVal    chr7:g.55242467_55242485delinsT
