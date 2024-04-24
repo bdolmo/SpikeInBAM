@@ -1,4 +1,6 @@
 dup/
+dup_new/
+dup_single/
 primer/
 *.bam
 *.fasta.gz

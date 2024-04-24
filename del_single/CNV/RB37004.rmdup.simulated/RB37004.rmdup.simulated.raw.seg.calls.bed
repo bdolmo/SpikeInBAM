@@ -1,0 +1,2 @@
+chr	start	end	regions	n_regions	log2_ratio	cn	phred	zscore	cnvtype
+chr4	114274700	114275200	NM_001148_37_38;ANK2,NM_001148_37_38;ANK2	46.6	100.0	2.528	2	0.444	3	0.9101521572171244	1	DUP

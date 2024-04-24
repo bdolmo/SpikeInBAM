@@ -1,0 +1,2 @@
+chr	start	end	regions	n_regions	log2_ratio	cn	phred	zscore	cnvtype
+chr16	1266931	1267010	NM_021098_30_31;CACNA1H	55.7	99.367	-10.149	1	-1.128	1	0.9317788886944709	1	DEL

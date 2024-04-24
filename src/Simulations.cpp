@@ -63,7 +63,7 @@ void simulateCNV(BamRecord& record, const std::string& region, const Variant& va
             }
             BamRecord dupRecord = record;
             dupRecord.SetQname(newQname);
-            writer.WriteRecord(dupRecord);
+            writer.WriteRawRecord(dupRecord);
         }
         else {
             bool modified = false;
@@ -80,13 +80,13 @@ void simulateCNV(BamRecord& record, const std::string& region, const Variant& va
             if (modified) {
                 record.UpdateSeq(modifiedSeq, record.cigarString()); 
             }
-            writer.WriteRecord(record);
+            writer.WriteRawRecord(record);
         } 
     } 
     else {
         if (action == "DUP") {
-            writer.WriteRecord(record);
-            writer.WriteRecord(record);
+            writer.WriteRawRecord(record);
+            writer.WriteRawRecord(record);
         }
         else {
             return;

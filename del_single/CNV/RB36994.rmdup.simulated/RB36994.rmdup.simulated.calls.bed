@@ -1,0 +1,2 @@
+chr	start	end	regions	gc	map	z_score	n_regions	log2_ratio	copy_number	score	x	cnvtype	std
+chr2	189851784	189851865	NM_000090_4_5;COL3A1	48.15	100.0	-9.712	1	-0.933	1	0.8477159093989005	1	DEL	0.0

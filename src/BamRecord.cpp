@@ -75,6 +75,18 @@ BamRecord::BamRecord(bam1_t *b, bam_hdr_t *h) : b_(b), h_(h) {
             default: _seq += '?'; break; // Just in case there is an unknown base
         }
     }
+
+    // Set the quality
+    uint8_t* _qual = bam_get_qual(b);
+    // std::cout << _qual << std::endl;
+
+    // std::fill_n(_qual, len, 0xFF); // Fill with default quality if none provided
+    // for (size_t i = 0; i < len; ++i) {
+    //     _qual[i] = static_cast<uint8_t>(_qual[i] - 33);
+    // }
+    // std::cout << _qual << std::endl;
+
+
 }
 
 std::vector<uint32_t> BamRecord::getCigarVector() const {
@@ -170,6 +182,7 @@ bam1_t* BamRecord::ToBam1_t() const {
     b->core.mpos = _matePos;
     b->core.l_qname = qname_len;
 
+
     if (!_mdString.empty()) {
         // Append the MD tag as a null-terminated string
         if (bam_aux_append(b, "MD", 'Z', _mdString.length() + 1, 
@@ -195,16 +208,20 @@ bam1_t* BamRecord::ToBam1_t() const {
         seq[i >> 1] = (i & 1) ? (seq[i >> 1] | base2val(_seq[i])) : (base2val(_seq[i]) << 4);
     }
 
-    // Set the quality
+    // // Set the quality
     uint8_t* qual = bam_get_qual(b);
     std::fill_n(qual, qual_len, 0xFF); // Fill with default quality if none provided
-    if (!_qual.empty()) {
-        for (size_t i = 0; i < qual_len; ++i) {
-            qual[i] = static_cast<uint8_t>(_qual[i] - 33);
-        }
-    }
 
-    // Return the filled bam1_t structure
+    // int offset = 33;
+    // char * q = strdup(_qual.c_str());
+    // if (!q) throw std::runtime_error("Failed to duplicate quality string");
+    for (size_t i = 0; i < qual_len; ++i) {
+        qual[i] -= 33; // Adjust quality scores based on the offset (typically 33 or 64)
+    }
+    memcpy(bam_get_qual(b), qual, qual_len); // Copy converted quality scores back into the BAM structure
+    // free(q); // Free the duplicated quality string
+
+
     return b;
 }
 
@@ -283,8 +300,20 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
     }
 
     // add in a NULL qual
-    uint8_t* s = bam_get_qual(b_);
-    s[0] = 0xff;
+    // uint8_t* s = bam_get_qual(b_);
+    // s[0] = 0xff;
+
+    SetQualities(seq, 33);
+
+    int qual_len = slen;
+    uint8_t* qual = bam_get_qual(b_);
+
+    // std::fill_n(qual, qual_len, 0xFF); // Fill with default quality if none provided
+    // if (!_qual.empty()) {
+    //     for (size_t i = 0; i < qual_len; ++i) {
+    //         qual[i] = static_cast<uint8_t>(_qual[i] - 33);
+    //     }
+    // }
 
     // add the aux data
     uint8_t* t = bam_get_aux(b_);
@@ -396,6 +425,7 @@ std::string BamRecord::Qname() const {
     // Convert C string to C++ string and return
     return std::string(qname);
 }
+
 
 // uint64_t BamRecord::GetID() const {
 //     return _id;
