@@ -1,2 +1,0 @@
-chr	start	end	regions	n_regions	log2_ratio	cn	phred	zscore	cnvtype
-chr5	45303700	45303941	NM_021072_5_6;HCN1	41.08	100.0	-5.692	1	-0.94	1	0.47493853625800597	1	DEL

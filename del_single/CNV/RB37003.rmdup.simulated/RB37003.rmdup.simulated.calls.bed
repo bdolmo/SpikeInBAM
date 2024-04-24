@@ -1,2 +1,0 @@
-chr	start	end	regions	gc	map	z_score	n_regions	log2_ratio	copy_number	score	x	cnvtype	std
-chr5	45303700	45303941	NM_021072_5_6;HCN1	41.08	100.0	-5.692	1	-0.94	1	0.47493853625800597	1	DEL	0.0
