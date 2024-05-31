@@ -28,9 +28,6 @@ void BamWriter::WriteRecord(const BamRecord& record) {
 
     // Convert BamRecord to bam1_t for writing
     bam1_t* b = record.ToBam1_t(); // Assuming BamRecord provides this method
-    uint8_t* qual_test = bam_get_qual(b);
-
-    std::cout << "qual " << qual_test << std::endl;
 
     if (sam_write1(out_, hdr_, b) < 0) {
         throw std::runtime_error("Could not write record to BAM file");

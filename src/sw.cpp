@@ -8,16 +8,19 @@
 // Assuming match, mismatch, gap open, and gap extend scores are constants
 const int MATCH = 2;
 const int MISMATCH = -6;
-const int GAP_OPEN = -24;
+const int GAP_OPEN = -18;
 const int GAP_EXTEND = 0;
-const int GAPTEST = -1;
 
 int score_match(char a, char b) {
     return a == b ? MATCH : MISMATCH;
 }
 
-int score_match_special(char a, char b) {
-    return a == b ? 0 : -18;
+int score_match_special1(char a, char b) {
+    return a == b ? 0 : -24;
+}
+
+int score_match_special2(char a, char b) {
+    return a == b ? -12 : -24;
 }
 
 std::string compact_cigar_string(const std::string& cigar_str) {
@@ -80,8 +83,8 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
             M[i][j] = std::max(
                 0, 
                 std::max({M[i - 1][j - 1] + score_match(seq1[i - 1], seq2[j - 1]), 
-                X[i - 1][j - 1]+ score_match_special(seq1[i - 1], seq2[j - 1]), 
-                Y[i - 1][j - 1]+ score_match_special(seq1[i - 1], seq2[j - 1]),
+                X[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]), 
+                Y[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]),
             }));
 
             X[i][j] = std::max({
@@ -161,8 +164,13 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
         secondSoftClip += "S";
     }
     std::string extendedCigar = firstSoftClip + cigar_str + secondSoftClip;
-
+    
     // std::string compact_cigar = compact_cigar_string(cigar_str);
+
+    std::cout << extendedCigar << std::endl;
+    std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl << std::endl;
+
+
     return AlignmentResult{
         max_i, max_j, max_score,
         query_start, query_end,

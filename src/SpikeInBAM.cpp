@@ -48,24 +48,41 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
     while (getline(file, line)) {
         std::istringstream iss(line);
         Variant variant;
-        iss >> variant.bamFile >> variant.chr;
-        std::string startPos, endPos;
+        std::string startPos, endPos, thirdField;
 
-        iss >> startPos >> endPos;
+        iss >> variant.bamFile >> variant.chr >> startPos >> endPos >> thirdField;
 
         if (std::isdigit(startPos[0])) {
             variant.start = std::stoll(startPos);
-            variant.end = std::isdigit(endPos[0]) ? std::stoll(endPos) : variant.start;
+            variant.end = variant.start; // Assume start position only, adjust based on context
 
-            // Parsing either DEL/DUP or REF/ALT based on whether endPos is numeric or not
+            std::string copyNumberOrAltSeq;
+            iss >> copyNumberOrAltSeq;
+
             if (std::isdigit(endPos[0])) {
-                iss >> variant.varType; // For CNV
+                // This block handles CNVs
+                variant.end = std::stoll(endPos);
+                variant.varType = thirdField; // expecting DUP, DEL, etc.
+                variant.vaf = std::stof(copyNumberOrAltSeq); // Handling copy number as VAF here
+
+                std::cout << " INFO: Found CNV " << variant.varType << " with copy number " << variant.vaf << " for BAM file: " << variant.bamFile << "\n";
             } else {
-                variant.refSeq = endPos;
-                iss >> variant.altSeq; // For SNV/INDEL
-                variant.varType = variant.refSeq.length() == 1 && variant.altSeq.length() == 1 ? "SNV" : "INDEL";
+                // This block handles SNVs and INDELs
+                variant.refSeq = endPos; // endPos is the reference sequence
+                variant.altSeq = thirdField; // thirdField is the alternate sequence
+                variant.vaf = std::stof(copyNumberOrAltSeq); // Handling VAF
+
+                // Check VAF range
+                if (variant.vaf < 0 || variant.vaf > 1) {
+                    std::cerr << " ERROR: Invalid VAF value " << variant.vaf << std::endl;
+                }
+
+                // Determine variant type based on sequence lengths
+                variant.varType = (variant.refSeq.length() == 1 && variant.altSeq.length() == 1) ? "SNV" : "INDEL";
+                variant.end = variant.start + variant.refSeq.length() - 1; // Adjust end position for INDELs
+
+                std::cout << " INFO: Found " << variant.varType << " with VAF " << variant.vaf << " for BAM file: " << variant.bamFile << "\n";
             }
-            std::cout << " INFO: Found " + variant.varType  + " for BAM file: " << variant.bamFile << "\n";
             variantsMap[variant.bamFile].push_back(variant);
         } else {
             std::cerr << " ERROR: Malformed line in BED file: " << line << std::endl;
@@ -73,6 +90,7 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
     }
     return variantsMap;
 }
+
 
 std::mt19937 rng{std::random_device{}()};
 
@@ -86,7 +104,9 @@ int main(int argc, char *argv[]) {
     std::string variantsFile = argv[1];
     std::string reference = argv[2];
     std::string outputDir = argv[3];
+    std::string suffix = argv[4];
 
+    
     auto variantsMap = parseBed(variantsFile);
 
     RefFasta ref(reference);
@@ -105,7 +125,7 @@ int main(int argc, char *argv[]) {
         BamReader reader(bamFile);
         BamRecord record;
 
-        std::string newSuffix = ".simulated.bam";
+        std::string newSuffix = suffix + ".bam";
         std::string bamName = getBasename(bamFile);
         bamName = replaceSuffix(bamName, newSuffix);
         std::string bamOut = outputDir + "/" + bamName;
@@ -117,7 +137,7 @@ int main(int argc, char *argv[]) {
 
             std::vector<SNV> snvs;
             if (variant.varType == "SNV" || variant.varType == "INDEL") {
-                region = variant.chr + ":" + std::to_string(std::max(static_cast<int64_t>(0), variant.position - 50)) + "-" + std::to_string(variant.position + 50);
+                region = variant.chr + ":" + std::to_string(std::max(static_cast<int64_t>(0), variant.start - 50)) + "-" + std::to_string(variant.end + 50);
             }
             else {
                 region = variant.chr + ":" + std::to_string(std::max(static_cast<int64_t>(0), variant.start)) + "-" + std::to_string(variant.end);
@@ -127,13 +147,13 @@ int main(int argc, char *argv[]) {
 
             while (reader.GetNextRecord(record)) {
                 if (variant.varType == "SNV") {
-                    if (record.Position() <= variant.position && (record.Position() + record.Seq().length()) >= variant.position) {
+                    if (record.Position() <= variant.start && (record.Position() + record.Seq().length()) >= variant.start) {
                         simulateSNV(record, variant);
                         writer.WriteRecord(record);
                     }
                 } 
                 if (variant.varType == "INDEL") {
-                    if (record.Position() <= variant.position && (record.Position() + record.Seq().length()) >= variant.position) {
+                    if (record.Position() <= variant.start && (record.Position() + record.Seq().length()) >= variant.start) {
                         simulateIndel(record, variant, ref);
                         writer.WriteRecord(record);
                     }

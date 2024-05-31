@@ -12,10 +12,11 @@ SpikeInBAM is a fast tool to simulate variants on already available BAMs.
 
 ## Usage:
 
-First you will need to define a config file with the desired variants to be simulated.
+You will need a config file reffered as `variants.txt` specifying the variants to be simulated.
 There should be a variant per line. Here an example:
 ```
     /home/user/input_folder/sample1.bam  chr7   55242467   GAATTAAGAGAAGCAACA   GTTGCT
+    /home/user/input_folder/sample1.bam  chr1   11213543   11219543   DEL
     /home/user/input_folder/sample2.bam  chr18   29104352   A   T
     /home/user/input_folder/sample3.bam  chr1   156082722    156089883    DEL
     /home/user/input_folder/sample4.bam  chr7   150652435    150661275    DUP
@@ -24,8 +25,10 @@ There should be a variant per line. Here an example:
 To execute the program:
 
 ```
-    python3 spikeinbam.py  --variants variants.txt --reference /path/to/ref.fasta --output outdir --threads 4
+    python3 spikeinbam.py  --variants variants.txt --reference /path/to/ref.fasta --threads 4 --suffix .simulated --output <output_directory>
 ```
+
+The <suffix> parameter by default includes ".simulated" just before ".bam" (e.g sample1.simulated.bam).
 
 All bam files will be placed at <outdir> and will display the suffix *.simulated.bam
 
@@ -36,7 +39,7 @@ You may consider useful to generated config files scripts/generate_config.py.
 It will create a config file supporting randomly placed single-exon or multiple-exon CNVs (--mode param).
 
 ```
-    python3 python3 generate_config.py --indir /path/to/directory_with_bam_files -c <del/dup> -b  /path/to/gene_panel.bed  --mode <single/multiple > output.config
+    python3 generate_config.py --indir /path/to/directory_with_bam_files -c <del/dup> -b  /path/to/gene_panel.bed  --mode <single/multiple> > output.config
 ```
 
 ## Motivation:

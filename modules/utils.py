@@ -28,7 +28,7 @@ def sort_bam(input_bam, output_bam=None, n_cpus=1):
     cmd = [samtools_binary, "sort", "-@", str(n_cpus),  "-T test", "-o", output_bam, input_bam]
     
     try:
-        msg = " INFO: Executing Samtools sorting:", " ".join(cmd)
+        msg = f" INFO: Executing Samtools sorting for {input_bam}"
         print(msg)
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
     except subprocess.CalledProcessError as e:

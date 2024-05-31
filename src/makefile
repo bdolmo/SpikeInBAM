@@ -11,7 +11,6 @@ HTSLIB_DIR = htslib
 INCLUDES = -I$(HTSLIB_DIR)
 
 LIBS = -L$(HTSLIB_DIR) -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu -lhts -lz -lbz2 -llzma -lpthread
-
 ifeq ($(STATIC),1)
     LIBS += -static -ldeflate
 endif

@@ -10,16 +10,19 @@ def main():
     parser.add_argument('--threads', '-t', default=1, help='Total number of threads')
     parser.add_argument('--reference', '-r', required=True, help='Genome reference in FASTA format')
     parser.add_argument('--output', '-o', required=True, help='Output directory where all simulated BAMs will be placed')
-    
+    parser.add_argument('--suffix', '-s', required=True, help='Suffix')
+
     args = parser.parse_args()
     start_time = time.time()
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    spikeinbam_exe = os.path.join(script_dir, "src", "spikeinbam")
 
-    spikeinbam_exe = os.path.join(os.getcwd(), "src", "spikeinbam")
     command = [
         spikeinbam_exe,
         args.variants,
         args.reference,
-        args.output
+        args.output,
+        args.suffix,
     ]
     if not os.path.isdir(args.output):
         os.mkdir(args.output)

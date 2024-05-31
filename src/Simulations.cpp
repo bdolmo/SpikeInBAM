@@ -23,6 +23,7 @@ struct Variant {
     std::string refSeq;
     std::string altSeq;
     std::string varType;
+    float vaf;
 };
 
 
@@ -100,8 +101,8 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
     // using 64-bit integers since new BAM specification
     int64_t recordStart = record.Position();
     int64_t recordEnd = recordStart + record.Seq().length();
-    int64_t indelStart = indel.position;
-    int64_t indelEnd = indel.position + indel.refSeq.length();
+    int64_t indelStart = indel.start;
+    int64_t indelEnd = indel.start + indel.refSeq.length();
     std::string modifiedSeq = record.Seq();
     bool overlapsIndel = false;
 
@@ -128,48 +129,58 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
         overlapsIndel = true;
     }
     if (overlapsIndel) {
-        std::string refSegment = ref.fetchSequence(record.chrName(), record.Position()-100, record.Position()+100);
-        if (refSegment.empty()) {
-            throw std::runtime_error("Failed to fetch reference sequence segment for alignment.");
-        }
-        AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
+        std::random_device rd;  // Obtain a random number from hardware
+        std::mt19937 gen(rd()); // Seed the generator
+        std::uniform_int_distribution<> distr(0, 99); // Define the range
 
-        int num_op = 0;
-        char firstOp = '\0';
-        char modOp = '\0';
-        std::string compact_cigar = "";
+        int prob = indel.vaf*100;
 
-        for (char ntd : aln.extended_cigar) {
-            if (firstOp == '\0') {
-                firstOp = ntd;
-                modOp = ntd;
-                num_op = 1;
-            } 
-            else if (firstOp == ntd || (firstOp == 'M' && ntd == 'X') || (firstOp == 'X' && ntd == 'M')) {
-                num_op++;
-                if ((firstOp == 'M' && ntd == 'X') || (firstOp == 'X' && ntd == 'M')) {
-                    modOp = 'M';
-                }
-            } 
-            else {
-                compact_cigar += std::to_string(num_op) + modOp;
-                firstOp = ntd;
-                modOp = ntd;
-                num_op = 1;
+
+        if (distr(gen) < prob) {
+            std::string refSegment = ref.fetchSequence(record.chrName(), record.Position()-100, record.Position()+100);
+            if (refSegment.empty()) {
+                throw std::runtime_error("Failed to fetch reference sequence segment for alignment.");
             }
+            AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
+
+            int num_op = 0;
+            char firstOp = '\0';
+            char modOp = '\0';
+            std::string compact_cigar = "";
+
+            for (char ntd : aln.extended_cigar) {
+                if (firstOp == '\0') {
+                    firstOp = ntd;
+                    modOp = ntd;
+                    num_op = 1;
+                } 
+                else if (firstOp == ntd || (firstOp == 'M' && ntd == 'X') || (firstOp == 'X' && ntd == 'M')) {
+                    num_op++;
+                    if ((firstOp == 'M' && ntd == 'X') || (firstOp == 'X' && ntd == 'M')) {
+                        modOp = 'M';
+                    }
+                } 
+                else {
+                    compact_cigar += std::to_string(num_op) + modOp;
+                    firstOp = ntd;
+                    modOp = ntd;
+                    num_op = 1;
+                }
+            }
+            if (num_op > 0) {
+                compact_cigar += std::to_string(num_op) + modOp;
+            }
+            int newRecordPosition = record.Position() - CONTEXT_SIZE + aln.ref_start;
+
+            record.UpdateSeq(modifiedSeq, compact_cigar);
+            record.SetPosition(newRecordPosition);
         }
-        if (num_op > 0) {
-            compact_cigar += std::to_string(num_op) + modOp;
-        }
-        int newRecordPosition = record.Position() - CONTEXT_SIZE + aln.ref_start;
-        record.UpdateSeq(modifiedSeq, compact_cigar);
-        record.SetPosition(newRecordPosition);
     }
 }
 
 void simulateSNV(BamRecord& record, const Variant& variant) {
     if (variant.refSeq.length() == 1 && variant.altSeq.length() == 1) {
-        int64_t variantPosInRead = variant.position - record.Position();
+        int64_t variantPosInRead = variant.start - record.Position();
         if (variantPosInRead >= 0 && variantPosInRead < static_cast<int64_t>(record.Seq().length())) {
             std::string modifiedSeq = record.Seq();
             modifiedSeq[variantPosInRead] = variant.altSeq[0];
