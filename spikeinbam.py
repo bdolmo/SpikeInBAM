@@ -10,7 +10,7 @@ def main():
     parser.add_argument('--threads', '-t', default=1, help='Total number of threads')
     parser.add_argument('--reference', '-r', required=True, help='Genome reference in FASTA format')
     parser.add_argument('--output', '-o', required=True, help='Output directory where all simulated BAMs will be placed')
-    parser.add_argument('--suffix', '-s', required=True, help='Suffix')
+    parser.add_argument('--suffix', '-s', default=".simulated",  help='Suffix')
 
     args = parser.parse_args()
     start_time = time.time()

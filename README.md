@@ -12,7 +12,7 @@ SpikeInBAM is a fast tool to simulate variants on already available BAMs.
 
 ## Usage:
 
-You will need a config file reffered as `variants.txt` specifying the variants to be simulated.
+You will need a config file referred as `variants.txt` specifying the variants to be simulated.
 There should be a variant per line. Here an example:
 ```
     /home/user/input_folder/sample1.bam  chr7   55242467   GAATTAAGAGAAGCAACA   GTTGCT
@@ -28,9 +28,9 @@ To execute the program:
     python3 spikeinbam.py  --variants variants.txt --reference /path/to/ref.fasta --threads 4 --suffix .simulated --output <output_directory>
 ```
 
-The <suffix> parameter by default includes ".simulated" just before ".bam" (e.g sample1.simulated.bam).
+The suffix parameter by default is defined as ".simulated" just before ".bam" (e.g sample1.simulated.bam).
 
-All bam files will be placed at <outdir> and will display the suffix *.simulated.bam
+All bam files will be placed at outdir and will display the suffix *.simulated.bam
 
 
 ## Additional scripts:
