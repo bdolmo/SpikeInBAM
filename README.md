@@ -16,7 +16,6 @@ You will need a config file referred as `variants.txt` specifying the variants t
 There should be a variant per line. Here an example:
 ```
     /home/user/input_folder/sample1.bam  chr7   55242467   GAATTAAGAGAAGCAACA   GTTGCT
-    /home/user/input_folder/sample1.bam  chr1   11213543   11219543   DEL
     /home/user/input_folder/sample2.bam  chr18   29104352   A   T
     /home/user/input_folder/sample3.bam  chr1   156082722    156089883    DEL    SOS1_7_to_8    1   multiple
     /home/user/input_folder/sample4.bam  chr7   150652435    150661275    DUP	TAZ_1_to_4	1	multiple
