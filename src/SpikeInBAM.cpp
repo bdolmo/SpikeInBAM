@@ -56,17 +56,22 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
             variant.start = std::stoll(startPos);
             variant.end = variant.start; // Assume start position only, adjust based on context
 
+
             std::string copyNumberOrAltSeq;
-            iss >> copyNumberOrAltSeq;
+            std::string exonName;
 
             if (std::isdigit(endPos[0])) {
                 // This block handles CNVs
                 variant.end = std::stoll(endPos);
                 variant.varType = thirdField; // expecting DUP, DEL, etc.
-                variant.vaf = std::stof(copyNumberOrAltSeq); // Handling copy number as VAF here
+                iss >> exonName >> copyNumberOrAltSeq;
+                variant.vaf = std::stof(copyNumberOrAltSeq);
 
                 std::cout << " INFO: Found CNV " << variant.varType << " with copy number " << variant.vaf << " for BAM file: " << variant.bamFile << "\n";
             } else {
+
+                iss >> copyNumberOrAltSeq;
+
                 // This block handles SNVs and INDELs
                 variant.refSeq = endPos; // endPos is the reference sequence
                 variant.altSeq = thirdField; // thirdField is the alternate sequence
