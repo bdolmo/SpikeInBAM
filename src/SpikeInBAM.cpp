@@ -23,14 +23,12 @@ using std::chrono::duration_cast;
 using std::chrono::duration;
 using std::chrono::milliseconds;
 
-
 std::string getBasename(const std::string& path) {
     size_t lastSlash = path.find_last_of("/\\");
     if (lastSlash != std::string::npos)
         return path.substr(lastSlash + 1);
     return path;
 }
-
 
 std::string replaceSuffix(const std::string& filename, const std::string& newSuffix) {
     size_t dotPos = filename.rfind(".bam");
@@ -56,7 +54,6 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
             variant.start = std::stoll(startPos);
             variant.end = variant.start; // Assume start position only, adjust based on context
 
-
             std::string copyNumberOrAltSeq;
             std::string exonName;
 
@@ -69,7 +66,6 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
 
                 std::cout << " INFO: Found CNV " << variant.varType << " with copy number " << variant.vaf << " for BAM file: " << variant.bamFile << "\n";
             } else {
-
                 iss >> copyNumberOrAltSeq;
 
                 // This block handles SNVs and INDELs
@@ -96,9 +92,7 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
     return variantsMap;
 }
 
-
 std::mt19937 rng{std::random_device{}()};
-
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
@@ -111,7 +105,6 @@ int main(int argc, char *argv[]) {
     std::string outputDir = argv[3];
     std::string suffix = argv[4];
 
-    
     auto variantsMap = parseBed(variantsFile);
 
     RefFasta ref(reference);
@@ -125,7 +118,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        const std::vector<Variant>& variants = entry.second;
+        std::vector<Variant> variants = entry.second;
+        std::sort(variants.begin(), variants.end(), [](const Variant& a, const Variant& b) { return a.start < b.start; });
 
         BamReader reader(bamFile);
         BamRecord record;
@@ -137,14 +131,13 @@ int main(int argc, char *argv[]) {
 
         BamWriter writer(bamOut, reader.getHeader());
 
-        for( auto& variant : variants) {
+        for (auto& variant : variants) {
             std::cout << " INFO: Simulating variant: " << variant.varType << " at " << variant.chr << ":" << variant.start << "-" << variant.end << "\n";
 
             std::vector<SNV> snvs;
             if (variant.varType == "SNV" || variant.varType == "INDEL") {
                 region = variant.chr + ":" + std::to_string(std::max(static_cast<int64_t>(0), variant.start - 50)) + "-" + std::to_string(variant.end + 50);
-            }
-            else {
+            } else {
                 region = variant.chr + ":" + std::to_string(std::max(static_cast<int64_t>(0), variant.start)) + "-" + std::to_string(variant.end);
                 snvs = identifySNVs(bamFile, ref, region, variant.chr);
             }
@@ -156,7 +149,7 @@ int main(int argc, char *argv[]) {
                         simulateSNV(record, variant);
                         writer.WriteRecord(record);
                     }
-                } 
+                }
                 if (variant.varType == "INDEL") {
                     if (record.Position() <= variant.start && (record.Position() + record.Seq().length()) >= variant.start) {
                         simulateIndel(record, variant, ref);
@@ -173,17 +166,19 @@ int main(int argc, char *argv[]) {
 
         while (fullReader.GetNextRecord(newRecord)) {
             bool overlapsAnyVariant = false;
-            for (const auto& variant : variants) {
 
-                std::string chr = variant.chr;
-                int64_t start = variant.start;
-                int64_t end = variant.end;
+            auto it = std::lower_bound(variants.begin(), variants.end(), newRecord.Position(), [](const Variant& variant, int64_t pos) {
+                return variant.end < pos;
+            });
 
-                if (newRecord.chrName() == chr && !(newRecord.Position() + newRecord.Seq().length() < start || newRecord.Position() > end)) {
+            while (it != variants.end() && it->start <= newRecord.Position() + newRecord.Seq().length()) {
+                if (newRecord.chrName() == it->chr && !(newRecord.Position() + newRecord.Seq().length() < it->start || newRecord.Position() > it->end)) {
                     overlapsAnyVariant = true;
                     break;
                 }
+                ++it;
             }
+
             if (!overlapsAnyVariant) {
                 writer.WriteRawRecord(newRecord);
             }

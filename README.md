@@ -38,7 +38,7 @@ You may consider useful to generated config files scripts/generate_config.py.
 It will create a config file supporting randomly placed single-exon or multiple-exon CNVs (--mode param).
 
 ```
-    python3 generate_config.py --indir /path/to/directory_with_bam_files -c <del/dup> -b  /path/to/gene_panel.bed  --mode <single/multiple> > output.config
+    python3 generate_cnv_config.py --indir /path/to/directory_with_bam_files -c <del/dup> -b  /path/to/gene_panel.bed  --mode <single/multiple> > output.config
 ```
 
 ## Motivation:

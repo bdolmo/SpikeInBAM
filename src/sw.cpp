@@ -167,8 +167,8 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
     
     // std::string compact_cigar = compact_cigar_string(cigar_str);
 
-    std::cout << extendedCigar << std::endl;
-    std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl << std::endl;
+    // std::cout << extendedCigar << std::endl;
+    // std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl << std::endl;
 
 
     return AlignmentResult{
