@@ -83,6 +83,10 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
             M[i][j] = std::max(
                 0, 
                 std::max({M[i - 1][j - 1] + score_match(seq1[i - 1], seq2[j - 1]), 
+
+                // X[i - 1][j - 1]+ score_match(seq1[i - 1], seq2[j - 1]), 
+                // Y[i - 1][j - 1]+ score_match(seq1[i - 1], seq2[j - 1]),
+
                 X[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]), 
                 Y[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]),
             }));
@@ -115,8 +119,6 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
     int query_end = max_i;
     int ref_start = max_j;
     int ref_end = max_j;
-
-
 
     // Traceback
     std::string seq1_align, seq2_align, spacer, cigar_str;
@@ -165,10 +167,9 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
     }
     std::string extendedCigar = firstSoftClip + cigar_str + secondSoftClip;
     
-    // std::string compact_cigar = compact_cigar_string(cigar_str);
-
-    // std::cout << extendedCigar << std::endl;
-    // std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl << std::endl;
+    std::string compact_cigar = compact_cigar_string(cigar_str);
+    std::cout << "extended_cigar:" << extendedCigar << std::endl;
+    std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl;
 
 
     return AlignmentResult{

@@ -144,21 +144,32 @@ int main(int argc, char *argv[]) {
             reader.SetRegion(region);
 
             while (reader.GetNextRecord(record)) {
+                if (record.IsUnmapped()) {
+                    continue;
+                }
+                std::cout <<" RECORD " << record.Qname()<< std::endl;
                 if (variant.varType == "SNV") {
                     if (record.Position() <= variant.start && (record.Position() + record.Seq().length()) >= variant.start) {
+                        // std::cout << "here1" << std::endl;
+                        std::cout <<record.Qname() << " " <<record.Position() << " IS SNV" << std::endl;
+
                         simulateSNV(record, variant);
                         writer.WriteRecord(record);
                     }
                 }
                 if (variant.varType == "INDEL") {
                     if (record.Position() <= variant.start && (record.Position() + record.Seq().length()) >= variant.start) {
+                        std::cout << "here2" << std::endl;
+                        std::cout <<record.Qname() << " "<< record.Position() << " IS INDEL" << std::endl;
                         simulateIndel(record, variant, ref);
                         writer.WriteRecord(record);
                     }
                 }
                 if (variant.varType == "DEL" || variant.varType == "DUP") {
+                    std::cout << "here3" << std::endl;
                     simulateCNV(record, region, variant, snvs, ref, writer, variant.varType, 0.5);
                 }
+                std::cout << "OUT" << std::endl;
             }
         }
         BamReader fullReader(bamFile);

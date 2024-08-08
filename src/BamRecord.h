@@ -20,6 +20,8 @@ class BamRecord {
         std::string Qname() const;
         int64_t matePos() const;
         // uint64_t GetID() const;
+        bool IsUnmapped()const;
+        bool IsMateUnmapped() const;
 
         int mapQual() const;
         void UpdateSeq(const std::string& newSeq, const std::string& newCigar);

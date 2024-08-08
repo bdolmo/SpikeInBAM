@@ -14,6 +14,7 @@ BamWriter::BamWriter(const std::string& filename, const bam_hdr_t* hdr) : out_(n
     if (sam_hdr_write(out_, hdr_) < 0) {
         throw std::runtime_error("Could not write header to BAM file: " + filename);
     }
+    bamName = filename;
 }
 
 BamWriter::~BamWriter() {
@@ -28,6 +29,7 @@ void BamWriter::WriteRecord(const BamRecord& record) {
 
     // Convert BamRecord to bam1_t for writing
     bam1_t* b = record.ToBam1_t(); // Assuming BamRecord provides this method
+    uint8_t* qual_test = bam_get_qual(b);
 
     if (sam_write1(out_, hdr_, b) < 0) {
         throw std::runtime_error("Could not write record to BAM file");
@@ -49,4 +51,9 @@ void BamWriter::WriteRawRecord(const BamRecord& record) {
     }
 
     // bam_destroy1(b); // Clean up the bam1_t struct
+}
+void BamWriter::CreateIndex() {
+    if (sam_index_build(bamName.c_str(), 0) < 0) { // Create BAM index with default index
+        throw std::runtime_error("Could not create index for BAM file: " + bamName);
+    }
 }

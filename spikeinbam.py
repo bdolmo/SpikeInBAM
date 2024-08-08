@@ -35,12 +35,12 @@ def main():
         msg = " ERROR: Could not execute SpikeInBAM:", str(e)
         print(msg)
 
-    process_all_bam_files(args.output, args.threads)
+    # process_all_bam_files(args.output, args.threads)
 
-    end_time = time.time()  # Record the end time
-    total_time = end_time - start_time  # Calculate the total execution time
-    msg = f" INFO: Total execution time: {total_time:.2f} seconds"
-    print(msg)
+    # end_time = time.time()  # Record the end time
+    # total_time = end_time - start_time  # Calculate the total execution time
+    # msg = f" INFO: Total execution time: {total_time:.2f} seconds"
+    # print(msg)
 
 
 if __name__ == "__main__":

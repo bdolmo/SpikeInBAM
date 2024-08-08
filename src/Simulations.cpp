@@ -27,6 +27,16 @@ struct Variant {
 };
 
 
+std::string str_toupper(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(),
+                // static_cast<int(*)(int)>(std::toupper)         // wrong
+                // [](int c){ return std::toupper(c); }           // wrong
+                // [](char c){ return std::toupper(c); }          // wrong
+                   [](unsigned char c){ return std::toupper(c); } // correct
+                  );
+    return s;
+}
 
 void simulateCNV(BamRecord& record, const std::string& region, const Variant& variant, 
     std::vector<SNV>& snvs, RefFasta& ref, BamWriter& writer, const std::string& action, double probability) {
@@ -129,6 +139,9 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
         overlapsIndel = true;
     }
     if (overlapsIndel) {
+
+        std::cout << "we are in this block" << std::endl;
+
         std::random_device rd;  // Obtain a random number from hardware
         std::mt19937 gen(rd()); // Seed the generator
         std::uniform_int_distribution<> distr(0, 99); // Define the range
@@ -141,6 +154,9 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
             if (refSegment.empty()) {
                 throw std::runtime_error("Failed to fetch reference sequence segment for alignment.");
             }
+            refSegment = str_toupper(refSegment);
+            std::cout <<  modifiedSeq << " " << refSegment << std::endl;
+
             AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
 
             int num_op = 0;
