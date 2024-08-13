@@ -271,7 +271,7 @@ bam1_t* BamRecord::ToBam1_t() const {
     // Calculate total data size needed
     size_t total_data_size = qname_len + cigar_bytes + seq_len + qual_len;
 
-    std::cout << "Total data size: " << total_data_size << std::endl;
+    // std::cout << "Total data size: " << total_data_size << std::endl;
 
     // Ensure space for all data components is allocated
     if (b_new->m_data < total_data_size) {
@@ -349,19 +349,21 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
         if (std::isdigit(ch)) {
             number += ch; // Build the number as a string
         } else {
-            int length = std::stoi(number); // Convert the number string to an integer
-            number.clear(); // Clear the number string for the next operation
+            if (!number.empty()) {
+                int length = std::stoi(number); // Convert the number string to an integer
+                number.clear(); // Clear the number string for the next operation
 
-            if (ch == 'M' || ch == 'I' || ch == 'S' || ch == '=' || ch == 'X') {
-                calculated_length += length;
+                if (ch == 'M' || ch == 'I' || ch == 'S' || ch == '=' || ch == 'X') {
+                    calculated_length += length;
+                }
+                // Note: 'D', 'N', 'H', 'P' are skipped as they do not consume query sequence bases
             }
-            // Note: 'D', 'N', 'H', 'P' are skipped as they do not consume query sequence bases
         }
     }
 
     if (calculated_length != seq.length()) {
-        std::cout << "ERROR: CIGAR string and query sequence are of different lengths" << std::endl;
-        std::cout << "CIGAR: " << cigar << " Sequence: " << seq << " CIGAR length: " << calculated_length << " Sequence length: " << seq.length() << std::endl;
+        std::cerr << "ERROR: CIGAR string and query sequence are of different lengths" << std::endl;
+        std::cerr << "CIGAR: " << cigar << " Sequence: " << seq << " CIGAR length: " << calculated_length << " Sequence length: " << seq.length() << std::endl;
         throw std::runtime_error("CIGAR string and query sequence are of different lengths");
     }
 
@@ -375,8 +377,8 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
     int new_size = qname_len + cigar_len + seq_len + qual_len + old_aux_len;
     int old_aux_spot = qname_len + cigar_len + (b_->core.l_qseq + 1) / 2 + b_->core.l_qseq;
 
-    std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
-    std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
+    // std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
+    // std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
 
     // Copy out all the old data
     uint8_t* oldd = (uint8_t*)malloc(b_->l_data);
@@ -453,8 +455,9 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
     // Reset the max size
     b_->m_data = b_->l_data;
 
-    free(oldd); // Just added
+    free(oldd); // Free the old data
 }
+
 
 
 // void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {

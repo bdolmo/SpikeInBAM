@@ -140,8 +140,6 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
     }
     if (overlapsIndel) {
 
-        std::cout << "we are in this block" << std::endl;
-
         std::random_device rd;  // Obtain a random number from hardware
         std::mt19937 gen(rd()); // Seed the generator
         std::uniform_int_distribution<> distr(0, 99); // Define the range
@@ -155,7 +153,7 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
                 throw std::runtime_error("Failed to fetch reference sequence segment for alignment.");
             }
             refSegment = str_toupper(refSegment);
-            std::cout <<  modifiedSeq << " " << refSegment << std::endl;
+            // std::cout <<  modifiedSeq << " " << refSegment << std::endl;
 
             AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
 
@@ -163,6 +161,8 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
             char firstOp = '\0';
             char modOp = '\0';
             std::string compact_cigar = "";
+
+            // std::cout <<  aln.extended_cigar << std::endl;
 
             for (char ntd : aln.extended_cigar) {
                 if (firstOp == '\0') {
@@ -186,6 +186,9 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
             if (num_op > 0) {
                 compact_cigar += std::to_string(num_op) + modOp;
             }
+
+            // std::cout << "COMPACT CIGAR " << compact_cigar << std::endl;
+
             int newRecordPosition = record.Position() - CONTEXT_SIZE + aln.ref_start;
 
             record.UpdateSeq(modifiedSeq, compact_cigar);

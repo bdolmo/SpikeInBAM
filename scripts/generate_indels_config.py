@@ -150,6 +150,8 @@ def generate_delins(chr, position, genome, samtools):
         if deletion_size > 1:
             break
     insertion_size = random.randint(1, deletion_size - 1)
+    if insertion_size == 1:
+        insertion_size = 2
     ref_seq = get_reference_sequence(chr, position, deletion_size, genome, samtools)
     inserted_seq = generate_inserted_sequence(chr, position, insertion_size, genome, samtools)
     alt_seq = (ref_seq[:1] + inserted_seq).upper()  # Include the first base of the ref_seq followed by the inserted sequence
@@ -181,10 +183,30 @@ def generate_variants(regions, num_variants, genome, samtools, insertion_rate, d
             if used_intervals[region[0]].overlaps(interval):
                 continue
 
+            # if len(variants) < num_deletions:
+            #     ref_seq = get_reference_sequence(region[0], position, indel_size, genome, samtools)
+            #     alt_seq = ref_seq[0]  # Only the first base to simulate deletion
+            #     variant_type = 'deletion'
             if len(variants) < num_deletions:
                 ref_seq = get_reference_sequence(region[0], position, indel_size, genome, samtools)
-                alt_seq = ref_seq[0]  # Only the first base to simulate deletion
+                
+                if indel_size == 1:
+                    # For a single nucleotide deletion, the ref_seq should include the deleted base and an additional base.
+                    # The alt_seq should include the base immediately before or after the deletion.
+                    ref_seq2 = get_reference_sequence(region[0], position-1, indel_size, genome, samtools)
+                    ref_seq1 = ref_seq
+                    ref_seq = ref_seq2+ref_seq1
+                    position = position-1
+                    # next_base = get_reference_sequence(region[0], position + 1, 1, genome, samtools)
+                    # print(ref_seq, next_base)
+                    alt_seq = ref_seq1  # Keep the first base and the next one as the alternate allele
+                    # ref_seq = ref_seq[0] + ref_seq[1]  # Use the first base and the deleted base as the reference allele
+                    # print(ref_seq, ref_seq1)
+                else:
+                    alt_seq = ref_seq[0]  # For multi-nucleotide deletions, keep the first base as the alternate allele
+                
                 variant_type = 'deletion'
+
             elif len(variants) < num_deletions + num_insertions:
                 ref_seq = get_reference_sequence(region[0], position, 1, genome, samtools)
                 inserted_seq = generate_inserted_sequence(region[0], position, indel_size, genome, samtools)
