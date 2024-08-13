@@ -342,50 +342,49 @@ void BamRecord::SetPosition(int64_t newPos) {
 }
 
 void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
-    // Verify that CIGAR string length matches sequence length
+    // Calculate the lengths as before
     int calculated_length = 0;
     std::string number;
     for (char ch : cigar) {
         if (std::isdigit(ch)) {
-            number += ch; // Build the number as a string
+            number += ch;
         } else {
             if (!number.empty()) {
-                int length = std::stoi(number); // Convert the number string to an integer
-                number.clear(); // Clear the number string for the next operation
+                int length = std::stoi(number);
+                number.clear();
 
                 if (ch == 'M' || ch == 'I' || ch == 'S' || ch == '=' || ch == 'X') {
                     calculated_length += length;
                 }
-                // Note: 'D', 'N', 'H', 'P' are skipped as they do not consume query sequence bases
             }
         }
     }
 
+    // Ensure lengths match
     if (calculated_length != seq.length()) {
         std::cerr << "ERROR: CIGAR string and query sequence are of different lengths" << std::endl;
-        std::cerr << "CIGAR: " << cigar << " Sequence: " << seq << " CIGAR length: " << calculated_length << " Sequence length: " << seq.length() << std::endl;
         throw std::runtime_error("CIGAR string and query sequence are of different lengths");
     }
 
-    // Calculate new size considering all components
+    // Calculate memory sizes
     int qname_len = b_->core.l_qname;
-    int cigar_len = b_->core.n_cigar * 4; // 4 bytes per CIGAR operation
-    int seq_len = (seq.length() + 1) / 2; // Sequence is 4-bit encoded
-    int qual_len = seq.length(); // Quality score length equals sequence length
+    int cigar_len = b_->core.n_cigar * 4;
+    int seq_len = (seq.length() + 1) / 2;
+    int qual_len = seq.length();
     int old_aux_len = bam_get_l_aux(b_);
-
     int new_size = qname_len + cigar_len + seq_len + qual_len + old_aux_len;
     int old_aux_spot = qname_len + cigar_len + (b_->core.l_qseq + 1) / 2 + b_->core.l_qseq;
 
-    // std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
-    // std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
+    // Debug output for sizes
+    std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
+    std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
 
-    // Copy out all the old data
+    // Copy old data
     uint8_t* oldd = (uint8_t*)malloc(b_->l_data);
     if (!oldd) throw std::runtime_error("Failed to allocate memory for old data");
     memcpy(oldd, b_->data, b_->l_data);
 
-    // Clear out the old data and allocate the new amount
+    // Allocate new data
     free(b_->data);
     b_->data = (uint8_t*)calloc(new_size, sizeof(uint8_t));
     if (!b_->data) {
@@ -396,68 +395,67 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
     // Add back the qname and cigar
     memcpy(b_->data, oldd, qname_len + cigar_len);
 
-    // Update the sizes
+    // Update sizes
     b_->l_data = new_size;
     b_->core.l_qseq = seq.length();
 
-    // Allocate the sequence
+    // Allocate sequence
     uint8_t* m_bases = b_->data + qname_len + cigar_len;
-    int slen = seq.length();
-
-    _seq = "";
-    _seq.reserve(slen);
-    for (int i = 0; i < slen; ++i) {
+    for (int i = 0; i < seq.length(); ++i) {
         uint8_t base = 15;
-        if (seq.at(i) == 'A') {
-            base = 1;
-            _seq += 'A';
-        }
-        else if (seq.at(i) == 'C') {
-            base = 2;
-            _seq += 'C';
-        }
-        else if (seq.at(i) == 'G') {
-            base = 4;
-            _seq += 'G';
-        }
-        else if (seq.at(i) == 'T') {
-            base = 8;
-            _seq += 'T';
-        }
-        else {
-            _seq += 'N';
+        switch (seq[i]) {
+            case 'A': base = 1; break;
+            case 'C': base = 2; break;
+            case 'G': base = 4; break;
+            case 'T': base = 8; break;
+            default: base = 15; break;  // N for any other character
         }
 
-        m_bases[i >> 1] &= ~(0xF << ((~i & 1) << 2));   ///< zero out previous 4-bit base encoding
-        m_bases[i >> 1] |= base << ((~i & 1) << 2);  ///< insert new 4-bit base encoding
+        // Boundary check
+        if (i / 2 < new_size) {
+            m_bases[i / 2] &= ~(0xF << ((~i & 1) << 2));
+            m_bases[i / 2] |= base << ((~i & 1) << 2);
+        } else {
+            std::cerr << "ERROR: Attempting to write outside allocated memory!" << std::endl;
+            free(oldd);
+            throw std::runtime_error("Memory corruption detected!");
+        }
     }
-    _cigarString = cigar;
-    std::vector<uint32_t> cigarVector = getCigarVector();
-    size_t cigar_bytes = cigarVector.size() * 4; // 4 bytes per CIGAR op
 
-    // Set the CIGAR operations
+    // Set CIGAR operations
+    std::vector<uint32_t> cigarVector = getCigarVector();
+    if (cigarVector.size() * 4 > new_size - qname_len) {
+        std::cerr << "ERROR: CIGAR operations exceed allocated memory!" << std::endl;
+        free(oldd);
+        throw std::runtime_error("Memory corruption detected!");
+    }
     uint32_t* cigar_ptr = bam_get_cigar(b_);
     for (size_t i = 0; i < cigarVector.size(); ++i) {
         cigar_ptr[i] = cigarVector[i];
     }
 
+    // Quality scores handling
     uint8_t* quality = bam_get_qual(b_);
-    for (size_t i = 0; i < slen; ++i) {
+    for (size_t i = 0; i < seq.length(); ++i) {
         quality[i] = _qualString[i];
     }
 
-    memcpy(bam_get_qual(b_), quality, slen); // Copy converted quality scores back into the BAM structure
-
-    // Add the aux data
+    // Add aux data back
     uint8_t* t = bam_get_aux(b_);
     memcpy(t, oldd + old_aux_spot, old_aux_len);
 
-    // Reset the max size
+    // Final memory check
+    if (b_->l_data != new_size) {
+        std::cerr << "ERROR: Final data size mismatch!" << std::endl;
+        free(oldd);
+        throw std::runtime_error("Memory corruption detected!");
+    }
+
     b_->m_data = b_->l_data;
 
-    free(oldd); // Free the old data
+    // Clean up
+    free(oldd);
 }
-
 
 
 // void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {

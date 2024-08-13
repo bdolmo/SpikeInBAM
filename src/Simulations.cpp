@@ -162,7 +162,7 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
             char modOp = '\0';
             std::string compact_cigar = "";
 
-            // std::cout <<  aln.extended_cigar << std::endl;
+            std::cout <<  aln.extended_cigar << std::endl;
 
             for (char ntd : aln.extended_cigar) {
                 if (firstOp == '\0') {
@@ -187,7 +187,7 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
                 compact_cigar += std::to_string(num_op) + modOp;
             }
 
-            // std::cout << "COMPACT CIGAR " << compact_cigar << std::endl;
+            std::cout << "COMPACT CIGAR " << compact_cigar << std::endl;
 
             int newRecordPosition = record.Position() - CONTEXT_SIZE + aln.ref_start;
 
