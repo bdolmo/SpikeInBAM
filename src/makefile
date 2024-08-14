@@ -3,7 +3,7 @@ CC = gcc
 CXXFLAGS = -Wall -g
 CFLAGS = -Wall -g
 HTSLIB_DIR = htslib
-
+SSW_DIR = .
 # INFO for STATIC LINKING:
 # I had lots of issues when trying to link curl library (libcurl) from htslib. 
 # I ended up building htslib without curl support: ./configure --disable-libcurl
@@ -15,7 +15,7 @@ ifeq ($(STATIC),1)
     LIBS += -static -ldeflate
 endif
 
-CPP_SRCS = SpikeInBAM.cpp BamReader.cpp BamRecord.cpp BamWriter.cpp RefFasta.cpp
+CPP_SRCS = SpikeInBAM.cpp BamReader.cpp BamRecord.cpp BamWriter.cpp RefFasta.cpp $(SSW_DIR)/ssw.cpp $(SSW_DIR)/ssw_cpp.cpp
 C_SRCS = 
 CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 C_OBJS = $(C_SRCS:.c=.o)

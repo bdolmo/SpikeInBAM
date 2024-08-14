@@ -7,8 +7,8 @@
 
 // Assuming match, mismatch, gap open, and gap extend scores are constants
 const int MATCH = 2;
-const int MISMATCH = -6;
-const int GAP_OPEN = -18;
+const int MISMATCH = -4;
+const int GAP_OPEN = -40;
 const int GAP_EXTEND = 0;
 
 int score_match(char a, char b) {
@@ -83,12 +83,10 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
             M[i][j] = std::max(
                 0, 
                 std::max({M[i - 1][j - 1] + score_match(seq1[i - 1], seq2[j - 1]), 
-
                 X[i - 1][j - 1]+ score_match(seq1[i - 1], seq2[j - 1]), 
                 Y[i - 1][j - 1]+ score_match(seq1[i - 1], seq2[j - 1]),
-
-                // X[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]), 
-                // Y[i - 1][j - 1]+ score_match_special2(seq1[i - 1], seq2[j - 1]),
+                // X[i - 1][j - 1]+ score_match_special1(seq1[i - 1], seq2[j - 1]), 
+                // Y[i - 1][j - 1]+ score_match_special1(seq1[i - 1], seq2[j - 1]),
             }));
 
             X[i][j] = std::max({
@@ -166,7 +164,6 @@ AlignmentResult affine_local_alignment(const std::string& seq1, const std::strin
         secondSoftClip += "S";
     }
     std::string extendedCigar = firstSoftClip + cigar_str + secondSoftClip;
-    
     std::string compact_cigar = compact_cigar_string(cigar_str);
     // std::cout << "extended_cigar:" << extendedCigar << std::endl;
     // std::cout << seq1_align << std::endl << spacer << std::endl << seq2_align << std::endl;

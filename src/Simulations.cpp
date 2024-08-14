@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <random>
+#include "ssw_cpp.h"
 
 struct Variant {
     std::string bamFile;
@@ -25,6 +26,184 @@ struct Variant {
     std::string varType;
     float vaf;
 };
+
+struct AlignmentResult2 {
+    int query_start;
+    int query_end;
+    int ref_start;
+    int ref_end;
+    std::string compactedCigar;
+    std::string extendedCigar;
+};
+
+AlignmentResult2 alignReadToContig(const std::string& read, const std::string& contig) {
+    // Initialize a default scoring matrix for DNA sequences
+    const int8_t match = 2;     // Match score
+    const int8_t mismatch = 8;  // Mismatch penalty
+    const int8_t gapOpen = 10;  // Gap open penalty
+    const int8_t gapExtend = 1; // Gap extend penalty
+
+    // Initialize the SSW aligner
+    StripedSmithWaterman::Aligner aligner(match, mismatch, gapOpen, gapExtend);
+
+    // Initialize the SSW filter (optional settings, can be adjusted as needed)
+    StripedSmithWaterman::Filter filter;
+
+    // Create an alignment object to store the result
+    StripedSmithWaterman::Alignment alignment;
+
+    // Perform the alignment
+    aligner.Align(read.c_str(), contig.c_str(), contig.size(), filter, &alignment);
+
+    // Extract the compacted CIGAR string
+    std::string compactedCigar = alignment.cigar_string;
+
+    // Generate the extended CIGAR string and adjust query_start and query_end to skip soft-clips
+    std::string extendedCigar;
+    int query_start = alignment.query_begin;
+    int query_end = alignment.query_end;
+    int ref_start = alignment.ref_begin;
+    int ref_end = alignment.ref_end;
+
+    int readPos = alignment.query_begin;
+    int contigPos = alignment.ref_begin;
+
+    // Adjust query_start by skipping leading soft-clips
+    if (compactedCigar[0] == 'S') {
+        size_t i = 0;
+        int len = 0;
+        while (isdigit(compactedCigar[i])) {
+            len = len * 10 + (compactedCigar[i] - '0');
+            ++i;
+        }
+        if (compactedCigar[i] == 'S') {
+            query_start += len; // Skip the soft-clipped positions
+        }
+    }
+
+    // Adjust query_end by skipping trailing soft-clips
+    if (compactedCigar.back() == 'S') {
+        size_t i = compactedCigar.size() - 1;
+        int len = 0;
+        while (isdigit(compactedCigar[i])) {
+            len = len + (compactedCigar[i] - '0') * pow(10, compactedCigar.size() - i - 1);
+            --i;
+        }
+        if (compactedCigar[i] == 'S') {
+            query_end -= len; // Skip the soft-clipped positions
+        }
+    }
+
+    for (size_t i = 0; i < compactedCigar.length(); ++i) {
+        char op = compactedCigar[i];
+        if (isdigit(op)) {
+            int len = 0;
+            while (isdigit(compactedCigar[i])) {
+                len = len * 10 + (compactedCigar[i] - '0');
+                ++i;
+            }
+            op = compactedCigar[i];
+
+            for (int j = 0; j < len; ++j) {
+                extendedCigar += op;
+                if (op == 'M') {
+                    readPos++;
+                    contigPos++;
+                } else if (op == 'I') {
+                    readPos++;
+                } else if (op == 'D') {
+                    contigPos++;
+                }
+            }
+        }
+    }
+
+    // Create the AlignmentResult struct
+    AlignmentResult2 result;
+    result.query_start = query_start;
+    result.query_end = query_end;
+    result.ref_start = ref_start;
+    result.ref_end = ref_end;
+    result.compactedCigar = compactedCigar;
+    result.extendedCigar = extendedCigar;
+
+    return result;
+}
+
+
+// std::pair<int, std::string> alignReadToContig(const std::string& read, const std::string& contig) {
+//     // Initialize a default scoring matrix for DNA sequences
+//     const int8_t match = 2;     // Match score
+//     const int8_t mismatch = 8;  // Mismatch penalty
+//     const int8_t gapOpen = 10;  // Gap open penalty
+//     const int8_t gapExtend = 1; // Gap extend penalty
+
+//     // Initialize the SSW aligner
+//     StripedSmithWaterman::Aligner aligner(match, mismatch, gapOpen, gapExtend);
+
+//     // Initialize the SSW filter (optional settings, can be adjusted as needed)
+//     StripedSmithWaterman::Filter filter;
+
+//     // Create an alignment object to store the result
+//     StripedSmithWaterman::Alignment alignment;
+
+//     // Perform the alignment
+//     aligner.Align(read.c_str(), contig.c_str(), contig.size(), filter, &alignment);
+
+//     // Convert the CIGAR vector to a string
+//     std::string cigar = alignment.cigar_string;
+
+//     // Generate the aligned sequence output using the CIGAR string
+//     std::string alignedRead, alignedContig, matchLine;
+//     int readPos = alignment.query_begin;
+//     int contigPos = alignment.ref_begin;
+
+//     for (size_t i = 0; i < cigar.length(); ++i) {
+//         char op = cigar[i];
+//         if (isdigit(op)) {
+//             int len = 0;
+//             while (isdigit(cigar[i])) {
+//                 len = len * 10 + (cigar[i] - '0');
+//                 ++i;
+//             }
+//             op = cigar[i];
+
+//             if (op == 'M') { // Match/Mismatch
+//                 for (int j = 0; j < len; ++j) {
+//                     alignedRead += read[readPos++];
+//                     alignedContig += contig[contigPos++];
+//                     matchLine += (alignedRead.back() == alignedContig.back()) ? '|' : ' ';
+//                 }
+//             } else if (op == 'I') { // Insertion in the read
+//                 for (int j = 0; j < len; ++j) {
+//                     alignedRead += read[readPos++];
+//                     alignedContig += '-';
+//                     matchLine += ' ';
+//                 }
+//             } else if (op == 'D') { // Deletion in the read (insertion in the contig)
+//                 for (int j = 0; j < len; ++j) {
+//                     alignedRead += '-';
+//                     alignedContig += contig[contigPos++];
+//                     matchLine += ' ';
+//                 }
+//             }
+//         }
+//     }
+
+//     // Calculate the total number of mismatches
+//     int totalMismatches = alignment.mismatches;
+
+//     // Print the alignment
+//     std::cout << "CIGAR:   " << cigar << std::endl;
+//     std::cout << "Read:    " << alignedRead << std::endl;
+//     std::cout << "         " << matchLine << std::endl;
+//     std::cout << "Contig:  " << alignedContig << std::endl;
+//     std::cout << "Aligned length: " << alignedRead.length() << std::endl << std::endl;
+
+//     // Return the total number of mismatches and the CIGAR string
+//     return {totalMismatches, cigar};
+// }
+
 
 
 std::string str_toupper(std::string s)
@@ -146,7 +325,6 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
 
         int prob = indel.vaf*100;
 
-
         if (distr(gen) < prob) {
             std::string refSegment = ref.fetchSequence(record.chrName(), record.Position()-100, record.Position()+100);
             if (refSegment.empty()) {
@@ -155,16 +333,20 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
             refSegment = str_toupper(refSegment);
             // std::cout <<  modifiedSeq << " " << refSegment << std::endl;
 
-            AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
+            // AlignmentResult aln = affine_local_alignment(modifiedSeq, refSegment);
+            AlignmentResult2 res = alignReadToContig(modifiedSeq, refSegment);
+            // std::cout << "aln: " << aln.query_start << " " << aln.query_end << " "<< aln.ref_start << " " << aln.ref_end  << std::endl;
+            // std::cout << "res: " << res.query_start << " " << res.query_end << " "<< res.ref_start << " " << res.ref_end  << std::endl;
 
             int num_op = 0;
             char firstOp = '\0';
             char modOp = '\0';
             std::string compact_cigar = "";
 
-            std::cout <<  aln.extended_cigar << std::endl;
+            // std::cout <<  aln.extended_cigar << std::endl;
+            // std::cout <<  aln.extended_cigar << std::endl;
 
-            for (char ntd : aln.extended_cigar) {
+            for (char ntd : res.extendedCigar) {
                 if (firstOp == '\0') {
                     firstOp = ntd;
                     modOp = ntd;
@@ -187,9 +369,9 @@ void simulateIndel(BamRecord& record, const Variant& indel, RefFasta& ref) {
                 compact_cigar += std::to_string(num_op) + modOp;
             }
 
-            std::cout << "COMPACT CIGAR " << compact_cigar << std::endl;
+            // std::cout << "COMPACT CIGAR " << compact_cigar << std::endl;
 
-            int newRecordPosition = record.Position() - CONTEXT_SIZE + aln.ref_start;
+            int newRecordPosition = record.Position() - CONTEXT_SIZE + res.ref_start-1;
 
             record.UpdateSeq(modifiedSeq, compact_cigar);
             record.SetPosition(newRecordPosition);

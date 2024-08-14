@@ -118,7 +118,7 @@ BamRecord::BamRecord(bam1_t *b, bam_hdr_t *h) : b_(b), h_(h) {
         // std::cout << "my initial CIGAR: " << _cigarString << std::endl;
         // std::cout << _qualString << std::endl;
         // std::cout << _qname << " " << _chrName << " " << _position  << " " << merdatest << std::endl;
-        std::cout << IsUnmapped()<<" " <<IsMateUnmapped()<<" "<< _qname << " " << _cigarString << " " << _seq << " " << calculated_length << " " << len << std::endl << std::endl;
+        // std::cout << IsUnmapped()<<" " <<IsMateUnmapped()<<" "<< _qname << " " << _cigarString << " " << _seq << " " << calculated_length << " " << len << std::endl << std::endl;
         if (!IsUnmapped()) {
             throw std::runtime_error("CIGAR string and query sequence are of different lengths1");
         }
@@ -270,9 +270,7 @@ bam1_t* BamRecord::ToBam1_t() const {
 
     // Calculate total data size needed
     size_t total_data_size = qname_len + cigar_bytes + seq_len + qual_len;
-
     // std::cout << "Total data size: " << total_data_size << std::endl;
-
     // Ensure space for all data components is allocated
     if (b_new->m_data < total_data_size) {
         b_new->data = (uint8_t*)realloc(b_new->data, total_data_size);
@@ -341,123 +339,6 @@ void BamRecord::SetPosition(int64_t newPos) {
     b_->core.pos = newPos; // Update the position in the bam1_t struct
 }
 
-void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
-    // Calculate the lengths as before
-    int calculated_length = 0;
-    std::string number;
-    for (char ch : cigar) {
-        if (std::isdigit(ch)) {
-            number += ch;
-        } else {
-            if (!number.empty()) {
-                int length = std::stoi(number);
-                number.clear();
-
-                if (ch == 'M' || ch == 'I' || ch == 'S' || ch == '=' || ch == 'X') {
-                    calculated_length += length;
-                }
-            }
-        }
-    }
-
-    // Ensure lengths match
-    if (calculated_length != seq.length()) {
-        std::cerr << "ERROR: CIGAR string and query sequence are of different lengths" << std::endl;
-        throw std::runtime_error("CIGAR string and query sequence are of different lengths");
-    }
-
-    // Calculate memory sizes
-    int qname_len = b_->core.l_qname;
-    int cigar_len = b_->core.n_cigar * 4;
-    int seq_len = (seq.length() + 1) / 2;
-    int qual_len = seq.length();
-    int old_aux_len = bam_get_l_aux(b_);
-    int new_size = qname_len + cigar_len + seq_len + qual_len + old_aux_len;
-    int old_aux_spot = qname_len + cigar_len + (b_->core.l_qseq + 1) / 2 + b_->core.l_qseq;
-
-    // Debug output for sizes
-    std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
-    std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
-
-    // Copy old data
-    uint8_t* oldd = (uint8_t*)malloc(b_->l_data);
-    if (!oldd) throw std::runtime_error("Failed to allocate memory for old data");
-    memcpy(oldd, b_->data, b_->l_data);
-
-    // Allocate new data
-    free(b_->data);
-    b_->data = (uint8_t*)calloc(new_size, sizeof(uint8_t));
-    if (!b_->data) {
-        free(oldd);
-        throw std::runtime_error("Failed to allocate memory for new data");
-    }
-
-    // Add back the qname and cigar
-    memcpy(b_->data, oldd, qname_len + cigar_len);
-
-    // Update sizes
-    b_->l_data = new_size;
-    b_->core.l_qseq = seq.length();
-
-    // Allocate sequence
-    uint8_t* m_bases = b_->data + qname_len + cigar_len;
-    for (int i = 0; i < seq.length(); ++i) {
-        uint8_t base = 15;
-        switch (seq[i]) {
-            case 'A': base = 1; break;
-            case 'C': base = 2; break;
-            case 'G': base = 4; break;
-            case 'T': base = 8; break;
-            default: base = 15; break;  // N for any other character
-        }
-
-        // Boundary check
-        if (i / 2 < new_size) {
-            m_bases[i / 2] &= ~(0xF << ((~i & 1) << 2));
-            m_bases[i / 2] |= base << ((~i & 1) << 2);
-        } else {
-            std::cerr << "ERROR: Attempting to write outside allocated memory!" << std::endl;
-            free(oldd);
-            throw std::runtime_error("Memory corruption detected!");
-        }
-    }
-
-    // Set CIGAR operations
-    std::vector<uint32_t> cigarVector = getCigarVector();
-    if (cigarVector.size() * 4 > new_size - qname_len) {
-        std::cerr << "ERROR: CIGAR operations exceed allocated memory!" << std::endl;
-        free(oldd);
-        throw std::runtime_error("Memory corruption detected!");
-    }
-    uint32_t* cigar_ptr = bam_get_cigar(b_);
-    for (size_t i = 0; i < cigarVector.size(); ++i) {
-        cigar_ptr[i] = cigarVector[i];
-    }
-
-    // Quality scores handling
-    uint8_t* quality = bam_get_qual(b_);
-    for (size_t i = 0; i < seq.length(); ++i) {
-        quality[i] = _qualString[i];
-    }
-
-    // Add aux data back
-    uint8_t* t = bam_get_aux(b_);
-    memcpy(t, oldd + old_aux_spot, old_aux_len);
-
-    // Final memory check
-    if (b_->l_data != new_size) {
-        std::cerr << "ERROR: Final data size mismatch!" << std::endl;
-        free(oldd);
-        throw std::runtime_error("Memory corruption detected!");
-    }
-
-    b_->m_data = b_->l_data;
-
-    // Clean up
-    free(oldd);
-}
-
-
 // void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
 //     // Verify that CIGAR string length matches sequence length
 //     int calculated_length = 0;
@@ -476,63 +357,73 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
 //         }
 //     }
 
-
-//     // std::cout << calculated_length << std::endl;
 //     if (calculated_length != seq.length()) {
-//         std::cout << cigar << " " << seq << " " << calculated_length << " " << seq.length() << std::endl;
-//         throw std::runtime_error("CIGAR string and query sequence are of different lengths2");
+//         std::cout << "ERROR: CIGAR string and query sequence are of different lengths" << std::endl;
+//         std::cout << "CIGAR: " << cigar << " Sequence: " << seq << " CIGAR length: " << calculated_length << " Sequence length: " << seq.length() << std::endl;
+//         throw std::runtime_error("CIGAR string and query sequence are of different lengths");
 //     }
 
-//     // Borrowed from SeqLib
-//     int new_size = b_->l_data - ((b_->core.l_qseq+1)>>1) - b_->core.l_qseq + ((seq.length()+1)>>1) + seq.length();    
-//     int old_aux_spot = (b_->core.n_cigar<<2) + b_->core.l_qname + ((b_->core.l_qseq + 1)>>1) + b_->core.l_qseq;
-//     int old_aux_len = bam_get_l_aux(b_); //(b->core.n_cigar<<2) + b->core.l_qname + ((b->core.l_qseq + 1)>>1) + b->core.l_qseq;
+//     // Calculate new size considering all components
+//     int qname_len = b_->core.l_qname;
+//     int cigar_len = b_->core.n_cigar * 4; // 4 bytes per CIGAR operation
+//     int seq_len = (seq.length() + 1) / 2; // Sequence is 4-bit encoded
+//     int qual_len = seq.length(); // Quality score length equals sequence length
+//     int old_aux_len = bam_get_l_aux(b_);
 
-//     // copy out all the old data
+//     int new_size = qname_len + cigar_len + seq_len + qual_len + old_aux_len;
+//     int old_aux_spot = qname_len + cigar_len + (b_->core.l_qseq + 1) / 2 + b_->core.l_qseq;
+
+//     std::cout << "Old data size: " << b_->l_data << " New data size: " << new_size << std::endl;
+//     std::cout << "Old aux spot: " << old_aux_spot << " Old aux len: " << old_aux_len << std::endl;
+
+//     // Copy out all the old data
 //     uint8_t* oldd = (uint8_t*)malloc(b_->l_data);
+//     if (!oldd) throw std::runtime_error("Failed to allocate memory for old data");
 //     memcpy(oldd, b_->data, b_->l_data);
 
-//     // clear out the old data and alloc the new amount
+//     // Clear out the old data and allocate the new amount
 //     free(b_->data);
-//     b_->data = (uint8_t*)calloc(new_size, sizeof(uint8_t)); 
+//     b_->data = (uint8_t*)calloc(new_size, sizeof(uint8_t));
+//     if (!b_->data) {
+//         free(oldd);
+//         throw std::runtime_error("Failed to allocate memory for new data");
+//     }
 
-//     // add back the qname and cigar
-//     memcpy(b_->data, oldd, b_->core.l_qname + (b_->core.n_cigar<<2));
+//     // Add back the qname and cigar
+//     memcpy(b_->data, oldd, qname_len + cigar_len);
 
-//     // update the sizes
-//     // >>1 shift is because only 4 bits needed per ATCGN base
+//     // Update the sizes
 //     b_->l_data = new_size;
 //     b_->core.l_qseq = seq.length();
 
-//     // allocate the sequence
-//     uint8_t* m_bases = b_->data + b_->core.l_qname + (b_->core.n_cigar<<2);
+//     // Allocate the sequence
+//     uint8_t* m_bases = b_->data + qname_len + cigar_len;
 //     int slen = seq.length();
 
 //     _seq = "";
 //     _seq.reserve(slen);
 //     for (int i = 0; i < slen; ++i) {
-
 //         uint8_t base = 15;
 //         if (seq.at(i) == 'A') {
-//         base = 1;
-//         _seq+= 'A';
+//             base = 1;
+//             _seq += 'A';
 //         }
 //         else if (seq.at(i) == 'C') {
-//         base = 2;
-//         _seq+= 'C';
+//             base = 2;
+//             _seq += 'C';
 //         }
 //         else if (seq.at(i) == 'G') {
-//         base = 4;
-//         _seq+= 'G';
+//             base = 4;
+//             _seq += 'G';
 //         }
 //         else if (seq.at(i) == 'T') {
-//         base = 8;
-//         _seq+= 'T';
+//             base = 8;
+//             _seq += 'T';
 //         }
 //         else {
-//         _seq+= 'N';
+//             _seq += 'N';
 //         }
-        
+
 //         m_bases[i >> 1] &= ~(0xF << ((~i & 1) << 2));   ///< zero out previous 4-bit base encoding
 //         m_bases[i >> 1] |= base << ((~i & 1) << 2);  ///< insert new 4-bit base encoding
 //     }
@@ -547,22 +438,128 @@ void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
 //     }
 
 //     uint8_t* quality = bam_get_qual(b_);
-
 //     for (size_t i = 0; i < slen; ++i) {
 //         quality[i] = _qualString[i];
 //     }
 
 //     memcpy(bam_get_qual(b_), quality, slen); // Copy converted quality scores back into the BAM structure
 
-//     // add the aux data
+//     // Add the aux data
 //     uint8_t* t = bam_get_aux(b_);
 //     memcpy(t, oldd + old_aux_spot, old_aux_len);
 
-//     // reset the max size
+//     // Reset the max size
 //     b_->m_data = b_->l_data;
 
-//     free(oldd); //just added
+//     free(oldd); // Just added
 // }
+
+
+void BamRecord::UpdateSeq(const std::string& seq, const std::string& cigar) {
+    // Verify that CIGAR string length matches sequence length
+    int calculated_length = 0;
+    std::string number;
+    for (char ch : cigar) {
+        if (std::isdigit(ch)) {
+            number += ch; // Build the number as a string
+        } else {
+            int length = std::stoi(number); // Convert the number string to an integer
+            number.clear(); // Clear the number string for the next operation
+
+            if (ch == 'M' || ch == 'I' || ch == 'S' || ch == '=' || ch == 'X') {
+                calculated_length += length;
+            }
+            // Note: 'D', 'N', 'H', 'P' are skipped as they do not consume query sequence bases
+        }
+    }
+
+
+    // std::cout << calculated_length << std::endl;
+    if (calculated_length != seq.length()) {
+        // std::cout << cigar << " " << seq << " " << calculated_length << " " << seq.length() << std::endl;
+        throw std::runtime_error("CIGAR string and query sequence are of different lengths2");
+    }
+
+    // Borrowed from SeqLib
+    int new_size = b_->l_data - ((b_->core.l_qseq+1)>>1) - b_->core.l_qseq + ((seq.length()+1)>>1) + seq.length();    
+    int old_aux_spot = (b_->core.n_cigar<<2) + b_->core.l_qname + ((b_->core.l_qseq + 1)>>1) + b_->core.l_qseq;
+    int old_aux_len = bam_get_l_aux(b_); //(b->core.n_cigar<<2) + b->core.l_qname + ((b->core.l_qseq + 1)>>1) + b->core.l_qseq;
+
+    // copy out all the old data
+    uint8_t* oldd = (uint8_t*)malloc(b_->l_data);
+    memcpy(oldd, b_->data, b_->l_data);
+
+    // clear out the old data and alloc the new amount
+    free(b_->data);
+    b_->data = (uint8_t*)calloc(new_size, sizeof(uint8_t)); 
+
+    // add back the qname and cigar
+    memcpy(b_->data, oldd, b_->core.l_qname + (b_->core.n_cigar<<2));
+
+    // update the sizes
+    // >>1 shift is because only 4 bits needed per ATCGN base
+    b_->l_data = new_size;
+    b_->core.l_qseq = seq.length();
+
+    // allocate the sequence
+    uint8_t* m_bases = b_->data + b_->core.l_qname + (b_->core.n_cigar<<2);
+    int slen = seq.length();
+
+    _seq = "";
+    _seq.reserve(slen);
+    for (int i = 0; i < slen; ++i) {
+
+        uint8_t base = 15;
+        if (seq.at(i) == 'A') {
+        base = 1;
+        _seq+= 'A';
+        }
+        else if (seq.at(i) == 'C') {
+        base = 2;
+        _seq+= 'C';
+        }
+        else if (seq.at(i) == 'G') {
+        base = 4;
+        _seq+= 'G';
+        }
+        else if (seq.at(i) == 'T') {
+        base = 8;
+        _seq+= 'T';
+        }
+        else {
+        _seq+= 'N';
+        }
+        
+        m_bases[i >> 1] &= ~(0xF << ((~i & 1) << 2));   ///< zero out previous 4-bit base encoding
+        m_bases[i >> 1] |= base << ((~i & 1) << 2);  ///< insert new 4-bit base encoding
+    }
+    _cigarString = cigar;
+    std::vector<uint32_t> cigarVector = getCigarVector();
+    size_t cigar_bytes = cigarVector.size() * 4; // 4 bytes per CIGAR op
+
+    // Set the CIGAR operations
+    uint32_t* cigar_ptr = bam_get_cigar(b_);
+    for (size_t i = 0; i < cigarVector.size(); ++i) {
+        cigar_ptr[i] = cigarVector[i];
+    }
+
+    uint8_t* quality = bam_get_qual(b_);
+
+    for (size_t i = 0; i < slen; ++i) {
+        quality[i] = _qualString[i];
+    }
+
+    memcpy(bam_get_qual(b_), quality, slen); // Copy converted quality scores back into the BAM structure
+
+    // add the aux data
+    uint8_t* t = bam_get_aux(b_);
+    memcpy(t, oldd + old_aux_spot, old_aux_len);
+
+    // reset the max size
+    b_->m_data = b_->l_data;
+
+    free(oldd); //just added
+}
 
 void BamRecord::SetQname(const std::string& n) {
     // Copy out the non-qname data

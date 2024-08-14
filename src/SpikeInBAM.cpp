@@ -51,7 +51,7 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
         iss >> variant.bamFile >> variant.chr >> startPos >> endPos >> thirdField;
 
         if (std::isdigit(startPos[0])) {
-            variant.start = std::stoll(startPos);
+            variant.start = std::stoll(startPos)-1;
             variant.end = variant.start; // Assume start position only, adjust based on context
 
             std::string copyNumberOrAltSeq;
@@ -176,22 +176,52 @@ int main(int argc, char *argv[]) {
         while (fullReader.GetNextRecord(newRecord)) {
             bool overlapsAnyVariant = false;
 
-            auto it = std::lower_bound(variants.begin(), variants.end(), newRecord.Position(), [](const Variant& variant, int64_t pos) {
+            int64_t recordStart = newRecord.Position();
+            int64_t recordEnd = recordStart + newRecord.Seq().length();
+            const std::string& recordChr = newRecord.chrName();
+
+            // Find the first variant that could overlap with the record
+            auto it = std::lower_bound(variants.begin(), variants.end(), recordStart, [](const Variant& variant, int64_t pos) {
                 return variant.end < pos;
             });
 
-            while (it != variants.end() && it->start <= newRecord.Position() + newRecord.Seq().length()) {
-                if (newRecord.chrName() == it->chr && !(newRecord.Position() + newRecord.Seq().length() < it->start || newRecord.Position() > it->end)) {
+            // Check variants within the possible overlapping range
+            for (; it != variants.end() && it->start <= recordEnd; ++it) {
+                if (recordChr == it->chr && recordEnd >= it->start && recordStart <= it->end) {
                     overlapsAnyVariant = true;
-                    break;
+                    break;  // Early exit if overlap is found
                 }
-                ++it;
             }
 
+            // Write the record if it doesn't overlap any variant
             if (!overlapsAnyVariant) {
                 writer.WriteRawRecord(newRecord);
             }
         }
+
+
+        // BamReader fullReader(bamFile);
+        // BamRecord newRecord;
+
+        // while (fullReader.GetNextRecord(newRecord)) {
+        //     bool overlapsAnyVariant = false;
+
+        //     auto it = std::lower_bound(variants.begin(), variants.end(), newRecord.Position(), [](const Variant& variant, int64_t pos) {
+        //         return variant.end < pos;
+        //     });
+
+        //     while (it != variants.end() && it->start <= newRecord.Position() + newRecord.Seq().length()) {
+        //         if (newRecord.chrName() == it->chr && !(newRecord.Position() + newRecord.Seq().length() < it->start || newRecord.Position() > it->end)) {
+        //             overlapsAnyVariant = true;
+        //             break;
+        //         }
+        //         ++it;
+        //     }
+
+        //     if (!overlapsAnyVariant) {
+        //         writer.WriteRawRecord(newRecord);
+        //     }
+        // }
     }
     return 0;
 }
