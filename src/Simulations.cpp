@@ -230,6 +230,7 @@ void simulateCNV(BamRecord& record, const std::string& region, const Variant& va
         flag = true;
     }
 
+
     if (randomValue < probability) {
         if (action == "DUP") {
             bool modified = false;
@@ -237,7 +238,7 @@ void simulateCNV(BamRecord& record, const std::string& region, const Variant& va
             std::string newQname = record.Qname() + "_dup";
             std::string modifiedSeq = record.Seq();
 
-            writer.WriteRecord(record);
+            // writer.WriteRecord(record);
             for (auto& snv : snvs) {
                 if (record.Position() <= snv.position && (record.Position() + record.Seq().length()) > snv.position) {
                     int snvPosInRead = snv.position - record.Position();
@@ -253,6 +254,7 @@ void simulateCNV(BamRecord& record, const std::string& region, const Variant& va
             }
             BamRecord dupRecord = record;
             dupRecord.SetQname(newQname);
+            // writer.WriteRecord(dupRecord);
             writer.WriteRawRecord(dupRecord);
         }
         else {

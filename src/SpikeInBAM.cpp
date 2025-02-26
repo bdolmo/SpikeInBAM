@@ -46,9 +46,9 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
     while (getline(file, line)) {
         std::istringstream iss(line);
         Variant variant;
-        std::string startPos, endPos, thirdField;
+        std::string startPos, endPos, infoField, thirdField;
 
-        iss >> variant.bamFile >> variant.chr >> startPos >> endPos >> thirdField;
+        iss >> variant.bamFile >> variant.chr >> startPos >> endPos >> infoField >> thirdField;
 
         if (std::isdigit(startPos[0])) {
             variant.start = std::stoll(startPos)-1;
@@ -61,7 +61,10 @@ std::map<std::string, std::vector<Variant>> parseBed(const std::string& bedFile)
                 // This block handles CNVs
                 variant.end = std::stoll(endPos);
                 variant.varType = thirdField; // expecting DUP, DEL, etc.
-                iss >> exonName >> copyNumberOrAltSeq;
+                iss >> copyNumberOrAltSeq;
+                // iss >> exonName >> copyNumberOrAltSeq;
+
+
                 variant.vaf = std::stof(copyNumberOrAltSeq);
 
                 std::cout << " INFO: Found CNV " << variant.varType << " with copy number " << variant.vaf << " for BAM file: " << variant.bamFile << "\n";
@@ -163,6 +166,7 @@ int main(int argc, char *argv[]) {
                         writer.WriteRecord(record);
                     }
                 }
+                std::cout << variant.varType << std::endl;
                 if (variant.varType == "DEL" || variant.varType == "DUP") {
                     // std::cout << "here3" << std::endl;
                     simulateCNV(record, region, variant, snvs, ref, writer, variant.varType, 0.5);

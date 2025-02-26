@@ -35,11 +35,11 @@ def sort_bam(input_bam, output_bam=None, n_cpus=1):
         msg = " ERROR: Could not sort bam:", str(e)
         print(msg)
 
-    # os.remove(input_bam)
-    # os.rename(output_bam, input_bam)
+    os.remove(input_bam)
+    os.rename(output_bam, input_bam)
 
-    # index_bam(input_bam)
-    index_bam(output_bam)
+    index_bam(input_bam)
+    # index_bam(output_bam)
 
 
 def index_bam(bam_file):
